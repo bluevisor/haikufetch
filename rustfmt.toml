@@ -1,0 +1,5 @@
+# Stable options only, so `cargo fmt --check` gives the same answer everywhere
+max_width = 100
+use_field_init_shorthand = true
+use_try_shorthand = true
+match_block_trailing_comma = true

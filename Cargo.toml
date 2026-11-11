@@ -1,0 +1,39 @@
+[package]
+name = "haikufetch"
+version = "1.0.0"
+edition = "2024"
+rust-version = "1.88"
+description = "A fast, small system information tool for macOS, Linux and Haiku"
+license = "MIT"
+repository = "https://github.com/bluevisor/haikufetch"
+
+[[bin]]
+name = "haikufetch"
+path = "src/main.rs"
+
+# Two dependencies on purpose. Everything else (color, arguments, the macOS frameworks, the Linux
+# GPU and display probes) is a few hundred lines of our own, which keeps a cold start to a couple
+# of milliseconds and the release binary well under a megabyte
+[dependencies]
+libc = "0.2.191"
+# Parse-only (no writer, no derive): the config is read as a plain table, key by key, so one bad value never throws the
+# rest of the file away
+toml = { version = "0.9.12", default-features = false, features = ["std", "parse", "serde"] }
+
+# Haiku's screen mode comes from app_server through a small C++ shim (src/platform/haiku_screen.cpp)
+[target.'cfg(target_os = "haiku")'.build-dependencies]
+cc = "1.2.55"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
