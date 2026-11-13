@@ -23,6 +23,9 @@ pub struct Entry {
     pub value: String,
     /// The facts behind the line as a JSON value
     pub json: String,
+    /// Byte length of the unpainted "used / total" prefix of a usage value, 0 for other lines.
+    /// The renderer pads it to a common width so the bars line up
+    pub figures: usize,
 }
 
 pub struct Ctx<'a> {
@@ -266,7 +269,12 @@ fn entry(ctx: &Ctx, module: &str, default_key: &str, value: String, json: String
         .get(module)
         .cloned()
         .unwrap_or_else(|| default_key.to_string());
-    Entry { key, value, json }
+    Entry {
+        key,
+        value,
+        json,
+        figures: 0,
+    }
 }
 
 fn plain(value: String, json: String) -> Entry {
@@ -274,6 +282,7 @@ fn plain(value: String, json: String) -> Entry {
         key: String::new(),
         value,
         json,
+        figures: 0,
     }
 }
 
@@ -311,11 +320,7 @@ fn usage_accent(percent: u8) -> Accent {
 /// "50.2 GiB / 64 GiB ███████▊░░ 78%", or "(78%)" in place of the bar with bars off
 fn usage_value(ctx: &Ctx, usage: Usage) -> String {
     let p = &ctx.painter;
-    let figures = format!(
-        "{} / {}",
-        format::size(usage.used),
-        format::size(usage.total)
-    );
+    let figures = usage_figures(usage);
     let Some(percent) = format::percent(usage.used, usage.total) else {
         return figures;
     };
@@ -333,6 +338,31 @@ fn usage_value(ctx: &Ctx, usage: Usage) -> String {
         bar.push_str(&p.paint(&empty, p.track()));
     }
     format!("{figures} {bar} {label}")
+}
+
+fn usage_figures(usage: Usage) -> String {
+    format!(
+        "{} / {}",
+        format::size(usage.used),
+        format::size(usage.total)
+    )
+}
+
+fn figures_len(usage: Usage) -> usize {
+    usage_figures(usage).len()
+}
+
+/// A usage line whose figures the renderer aligns with the other usage lines
+fn usage_entry(ctx: &Ctx, module: &str, default_key: &str, usage: Usage) -> Entry {
+    let mut e = entry(
+        ctx,
+        module,
+        default_key,
+        usage_value(ctx, usage),
+        usage_json(usage),
+    );
+    e.figures = figures_len(usage);
+    e
 }
 
 fn usage_json(usage: Usage) -> String {
@@ -497,7 +527,12 @@ fn screen(ctx: &Ctx) -> Vec<Entry> {
                 .cloned()
                 .filter(|_| count <= 1)
                 .unwrap_or(key);
-            Entry { key, value, json }
+            Entry {
+                key,
+                value,
+                json,
+                figures: 0,
+            }
         })
         .collect()
 }
@@ -563,7 +598,7 @@ fn gpu(ctx: &Ctx) -> Vec<Entry> {
 
 fn memory(ctx: &Ctx) -> Vec<Entry> {
     platform::memory()
-        .map(|u| entry(ctx, "memory", "RAM", usage_value(ctx, u), usage_json(u)))
+        .map(|u| usage_entry(ctx, "memory", "RAM", u))
         .into_iter()
         .collect()
 }
@@ -581,13 +616,7 @@ fn swap(ctx: &Ctx) -> Vec<Entry> {
             usage_json(usage),
         )];
     }
-    vec![entry(
-        ctx,
-        "swap",
-        "Swap",
-        usage_value(ctx, usage),
-        usage_json(usage),
-    )]
+    vec![usage_entry(ctx, "swap", "Swap", usage)]
 }
 
 fn disk(ctx: &Ctx) -> Vec<Entry> {
@@ -603,13 +632,16 @@ fn disk(ctx: &Ctx) -> Vec<Entry> {
                 .keys
                 .get("disk")
                 .map(|k| k.replace("{path}", path))
-                .unwrap_or_else(|| format!("Disk ({path})"));
+                .unwrap_or_else(|| String::from("Disk"));
             let json = format!("{{\"path\":{},{}", js(path), &usage_json(usage)[1..]);
-            Some(Entry {
+            let mut entry = Entry {
                 key,
                 value: usage_value(ctx, usage),
                 json,
-            })
+                figures: 0,
+            };
+            entry.figures = figures_len(usage);
+            Some(entry)
         })
         .collect()
 }

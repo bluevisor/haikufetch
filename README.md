@@ -18,7 +18,7 @@ tool that starts, gathers everything and exits in about the time it takes your t
 █████████████████████████▒       GPU: Apple M5 Pro (20 cores) @ 1.62 GHz
 ▒██████████████████████████▄     RAM: 41.4 GiB / 64 GiB ██████▍░░░ 64%
  ████████████████████████████▄   Swap: 1.2 GiB / 4 GiB ██▉░░░░░░░ 30%
-  ███████████████████████████▓   Disk (/): 512 GiB / 926 GiB █████▌░░░░ 55%
+  ███████████████████████████▓   Disk: 512 GiB / 926 GiB █████▌░░░░ 55%
    █████████████████████████▓    Local IPv4 (en0): 192.168.1.20/24
     ▓██████████████████████▀     Wi-Fi: Home
      ▀█████████▀▀████████▓       Tailscale: 100.81.13.5 (studio)
