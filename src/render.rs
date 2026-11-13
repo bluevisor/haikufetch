@@ -39,14 +39,25 @@ pub fn key(painter: &Painter, label: &str) -> String {
 
 /// The text lines: "Key: value", or the value alone for keyless entries
 pub fn lines(outputs: &[Output], painter: &Painter) -> Vec<String> {
+    let figures = outputs
+        .iter()
+        .flat_map(|o| &o.entries)
+        .map(|e| e.figures)
+        .max()
+        .unwrap_or(0);
     outputs
         .iter()
         .flat_map(|o| &o.entries)
         .map(|e| {
+            let mut value = e.value.clone();
+            // Right-align "used / total" so the bars start in one column
+            if e.figures > 0 {
+                value.insert_str(0, &" ".repeat(figures - e.figures));
+            }
             if e.key.is_empty() {
-                e.value.clone()
+                value
             } else {
-                format!("{} {}", key(painter, &e.key), e.value)
+                format!("{} {}", key(painter, &e.key), value)
             }
         })
         .collect()
